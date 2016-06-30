@@ -189,13 +189,19 @@ static void setup_end_tag(bd_t *bd)
 __weak void setup_board_tags(struct tag **in_params) {}
 
 #ifdef CONFIG_ARM64
-static void do_nonsec_virt_switch(void)
+static void do_nonsec_virt_switch(bootm_headers_t *images, int flag)
 {
 	smp_kick_all_cpus();
 	dcache_disable();	/* flush cache before swtiching to EL2 */
-	armv8_switch_to_el2();
+
 #ifdef CONFIG_ARMV8_SWITCH_TO_EL1
-	armv8_switch_to_el1();
+	armv8_switch_to_el2((u64)images->ep, (u64)gd->bd->bi_arch_number,
+			    (u64)images->ft_addr, ES_TO_AARCH64);
+	armv8_switch_to_el1((u64)images->ep, (u64)gd->bd->bi_arch_number,
+			    (u64)images->ft_addr, flag);
+#else
+	armv8_switch_to_el2((u64)images->ep, (u64)gd->bd->bi_arch_number,
+			    (u64)images->ft_addr, flag);
 #endif
 }
 #endif
@@ -268,6 +274,10 @@ bool armv7_boot_nonsec(void)
 }
 #endif
 
+__weak void update_os_arch_secondary_cores(uint8_t os_arch)
+{
+}
+
 /* Subcommand: GO */
 static void boot_jump_linux(bootm_headers_t *images, int flag)
 {
@@ -275,6 +285,7 @@ static void boot_jump_linux(bootm_headers_t *images, int flag)
 	void (*kernel_entry)(void *fdt_addr, void *res0, void *res1,
 			void *res2);
 	int fake = (flag & BOOTM_STATE_OS_FAKE_GO);
+	int es_flag = ES_TO_AARCH64;
 
 	kernel_entry = (void (*)(void *fdt_addr, void *res0, void *res1,
 				void *res2))images->ep;
@@ -286,7 +297,12 @@ static void boot_jump_linux(bootm_headers_t *images, int flag)
 	announce_and_cleanup(fake);
 
 	if (!fake) {
-		do_nonsec_virt_switch();
+		update_os_arch_secondary_cores(images->os.arch);
+		if ((IH_ARCH_DEFAULT == IH_ARCH_ARM64) &&
+		    (images->os.arch == IH_ARCH_ARM))
+			es_flag = ES_TO_AARCH32;
+
+		do_nonsec_virt_switch(images, es_flag);
 		kernel_entry(images->ft_addr, NULL, NULL, NULL);
 	}
 #else
