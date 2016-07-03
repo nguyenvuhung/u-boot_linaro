@@ -11,6 +11,7 @@
 #include <asm/gic.h>
 #include <asm/armv7.h>
 #include <asm/proc-armv/ptrace.h>
+#include <asm/psci.h>
 
 .arch_extension sec
 .arch_extension virt
@@ -89,6 +90,12 @@ _secure_monitor:
 	movne	r4, #0
 	mcrrne	p15, 4, r4, r4, c14		@ Reset CNTVOFF to zero
 1:
+#ifdef CONFIG_ARMV7_PSCI
+	bl	psci_get_cpu_id
+	bl	psci_get_cpu_stack_top
+	sub	r0, r0, #PSCI_CONTEXT_ID_OFFSET
+	ldr	r0, [r0]			@ get Context ID in r0
+#endif
 	mov	lr, ip
 	mov	ip, #(F_BIT | I_BIT | A_BIT)	@ Set A, I and F
 	tst	lr, #1				@ Check for Thumb PC

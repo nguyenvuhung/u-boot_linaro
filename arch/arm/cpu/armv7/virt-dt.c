@@ -67,7 +67,15 @@ static int fdt_psci(void *fdt)
 			return nodeoff;
 	}
 
-	tmp = fdt_setprop_string(fdt, nodeoff, "compatible", "arm,psci");
+#ifdef CONFIG_ARMV7_PSCI_1_0
+	tmp = fdt_setprop_string(fdt, nodeoff, "compatible", "arm,psci-1.0");
+	if (tmp)
+		return tmp;
+	tmp = fdt_appendprop_string(fdt, nodeoff, "compatible", "arm,psci-0.2");
+	if (tmp)
+		return tmp;
+#endif
+	tmp = fdt_appendprop_string(fdt, nodeoff, "compatible", "arm,psci");
 	if (tmp)
 		return tmp;
 	tmp = fdt_setprop_string(fdt, nodeoff, "method", "smc");

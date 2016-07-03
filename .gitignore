@@ -84,3 +84,11 @@ GTAGS
 *.orig
 *~
 \#*#
+
+*~
+*.map
+*.srec
+*.dump
+*.bin
+
+/output
