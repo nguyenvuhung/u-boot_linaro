@@ -13,6 +13,8 @@
 #ifdef CONFIG_MP
 #include <asm/arch/mp.h>
 #endif
+#include <asm/u-boot.h>
+#include <asm/system.h>
 
 ENTRY(lowlevel_init)
 	mov	x29, lr			/* Save LR */
@@ -320,6 +322,12 @@ ENTRY(secondary_boot_func)
         gic_wait_for_interrupt_m x0, w1
 #endif
 
+	ldr	x5, [x11, #24]
+	ldr	x6, =IH_ARCH_DEFAULT
+	cmp	x6, x5
+	b.ne	slave_cpu
+
+	ldr	x3, =ES_TO_AARCH64
 	bl secondary_switch_to_el2
 #ifdef CONFIG_ARMV8_SWITCH_TO_EL1
 	bl secondary_switch_to_el1
@@ -337,19 +345,38 @@ slave_cpu:
 	tbz     x1, #25, cpu_is_le
 	rev     x0, x0                  /* BE to LE conversion */
 cpu_is_le:
+
+	ldr	x5, [x11, #24]
+	ldr	x6, =IH_ARCH_DEFAULT
+	cmp	x6, x5
+	b.eq	1f
+
+#ifdef CONFIG_ARMV8_SWITCH_TO_EL1
+	ldr	x3, =ES_TO_AARCH64
+	bl	secondary_switch_to_el2
+	ldr	x0, [x11]
+	ldr	x3, =ES_TO_AARCH32
+	bl	secondary_switch_to_el1
+#else
+	ldr	x0, [x11]
+	ldr	x3, =ES_TO_AARCH32
+	bl	secondary_switch_to_el2
+#endif
+
+1:
 	br	x0			/* branch to the given address */
 ENDPROC(secondary_boot_func)
 
 ENTRY(secondary_switch_to_el2)
-	switch_el x0, 1f, 0f, 0f
+	switch_el x4, 1f, 0f, 0f
 0:	ret
-1:	armv8_switch_to_el2_m x0
+1:	armv8_switch_to_el2_m x0, x3, x4
 ENDPROC(secondary_switch_to_el2)
 
 ENTRY(secondary_switch_to_el1)
-	switch_el x0, 0f, 1f, 0f
+	switch_el x4, 0f, 1f, 0f
 0:	ret
-1:	armv8_switch_to_el1_m x0, x1
+1:	armv8_switch_to_el1_m x0, x3, x4
 ENDPROC(secondary_switch_to_el1)
 
 	/* Ensure that the literals used by the secondary boot code are
