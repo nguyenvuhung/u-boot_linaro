@@ -11,13 +11,13 @@
 #include <asm/macro.h>
 
 ENTRY(armv8_switch_to_el2)
-	switch_el x0, 1f, 0f, 0f
+	switch_el x4, 1f, 0f, 0f
 0:	ret
-1:	armv8_switch_to_el2_m x0
+1:	armv8_switch_to_el2_m x0, x3, x4
 ENDPROC(armv8_switch_to_el2)
 
 ENTRY(armv8_switch_to_el1)
-	switch_el x0, 0f, 1f, 0f
+	switch_el x4, 0f, 1f, 0f
 0:	ret
-1:	armv8_switch_to_el1_m x0, x1
+1:	armv8_switch_to_el1_m x0, x3, x4
 ENDPROC(armv8_switch_to_el1)

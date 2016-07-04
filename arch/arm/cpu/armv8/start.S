@@ -234,6 +234,7 @@ WEAK(lowlevel_init)
 	/*
 	 * All slaves will enter EL2 and optionally EL1.
 	 */
+	ldr	x3, =ES_TO_AARCH64
 	bl	armv8_switch_to_el2
 #ifdef CONFIG_ARMV8_SWITCH_TO_EL1
 	bl	armv8_switch_to_el1
